@@ -40,9 +40,14 @@ public class ClusterPlotter {
 
         Random rand = new Random();
 
-        List<Tuple> centers = new ArrayList<Tuple>();
+        List<Tuple> centers = new ArrayList<>(k);
         for(int i = 0; i<k; i++) {
             centers.add(data.get(rand.nextInt(data.size())));
+        }
+
+        System.out.println("Centers:");
+        for(Tuple center : centers) {
+            System.out.print("(" + center.x +", "+ center.y +") ");
         }
 
         for(Tuple item : data) {
@@ -77,5 +82,18 @@ public class ClusterPlotter {
             exit(1);
         }
         return data;
+    }
+
+    Tuple find_center(List<Tuple> cluster) {
+        double total_x = 0;
+        double total_y = 0;
+
+        //Find average x and y of the cluster
+        for(Tuple item : cluster) {
+            total_x += item.x;
+            total_y += item.y;
+        }
+
+        return new Tuple(total_x/cluster.size(), total_y/cluster.size());
     }
 }
