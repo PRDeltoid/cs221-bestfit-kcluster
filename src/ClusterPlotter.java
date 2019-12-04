@@ -106,7 +106,6 @@ public class ClusterPlotter {
         System.out.println("\n"); //newline
 
         //Organize data into clusters based on centers
-        //List<List<Tuple>> clusters =  new ArrayList<List<Tuple>>(k);
         List<Cluster> clusters = new ArrayList<Cluster>(k);
         for(int i = 0; i<k; i++) {
             Color randomColor = new Color(rand.nextFloat(), rand.nextFloat(), rand.nextFloat());
@@ -115,18 +114,17 @@ public class ClusterPlotter {
 
         for(Tuple item : data) {
             double minDist = Double.POSITIVE_INFINITY;
-            //int clusterId = -1;
             Cluster cluster = new Cluster();
             //For each item, calculate the distance to all centers
-            //and mark the closest center's clusterId (our "clusters" index)
+            //and mark the closest center's cluster
             for(int i = 0; i < k; i++) {
                 if(item.dist(centers.get(i)) < minDist) {
                     //We found a new minimum. Mark it and repeat
                     minDist = item.dist(centers.get(i));
-                    //clusterId = i;
                     cluster = clusters.get(i);
                 }
             }
+            //Add the item to its closest cluster center
             cluster.add(item);
         }
 
@@ -141,6 +139,7 @@ public class ClusterPlotter {
         }
 
         //Calculate error level
+        //TODO
         /*
         for(List<Tuple> cluster : clusters) {
             for (Tuple item : data) {
