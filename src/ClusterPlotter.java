@@ -38,7 +38,16 @@ public class ClusterPlotter {
     class Cluster {
         int clusterId;
         Color clusterColor;
-        List<Tuple> cluster_array;
+        List<Tuple> clusterArray;
+
+        public Cluster() {
+        }
+
+        public Cluster(int id, Color col) {
+            this.clusterId = id;
+            this.clusterColor = col;
+            this.clusterArray = new ArrayList<>();
+        }
 
         public void setClusterId(int id) {
             this.clusterId = id;
@@ -49,7 +58,32 @@ public class ClusterPlotter {
         }
 
         public void add(Tuple tup) {
-            cluster_array.add(tup);
+            clusterArray.add(tup);
+        }
+
+        public int size() {
+            return clusterArray.size();
+        }
+
+        public Tuple get(int i) {
+            return this.clusterArray.get(i);
+        }
+
+        public List<Tuple> getList() {
+            return this.clusterArray;
+        }
+
+        Tuple find_center() {
+            double total_x = 0;
+            double total_y = 0;
+
+            //Find average x and y of the cluster
+            for(Tuple item : clusterArray) {
+                total_x += item.x;
+                total_y += item.y;
+            }
+
+            return new Tuple(total_x/clusterArray.size(), total_y/clusterArray.size());
         }
     }
 
@@ -72,37 +106,38 @@ public class ClusterPlotter {
         System.out.println("\n"); //newline
 
         //Organize data into clusters based on centers
-        List<List<Tuple>> clusters =  new ArrayList<List<Tuple>>(k);
-        List<Color> clusterColors = new ArrayList<Color>(k);
+        //List<List<Tuple>> clusters =  new ArrayList<List<Tuple>>(k);
+        List<Cluster> clusters = new ArrayList<Cluster>(k);
         for(int i = 0; i<k; i++) {
-            clusters.add(new ArrayList<Tuple>());
-            clusterColors.add(new Color(rand.nextFloat(), rand.nextFloat(), rand.nextFloat()));
+            Color randomColor = new Color(rand.nextFloat(), rand.nextFloat(), rand.nextFloat());
+            clusters.add(new Cluster(i, randomColor));
         }
 
         for(Tuple item : data) {
             double minDist = Double.POSITIVE_INFINITY;
-            int clusterId = -1;
+            //int clusterId = -1;
+            Cluster cluster = new Cluster();
             //For each item, calculate the distance to all centers
             //and mark the closest center's clusterId (our "clusters" index)
             for(int i = 0; i < k; i++) {
                 if(item.dist(centers.get(i)) < minDist) {
                     //We found a new minimum. Mark it and repeat
                     minDist = item.dist(centers.get(i));
-                    clusterId = i;
+                    //clusterId = i;
+                    cluster = clusters.get(i);
                 }
             }
-            //Add our item to the closest cluster
-            clusters.get(clusterId).add(item);
+            cluster.add(item);
         }
 
         //Console output of clusters for debugging
-        for(List<Tuple> cluster : clusters) {
+        for(Cluster cluster : clusters) {
             System.out.println("[");
-            for(Tuple item : cluster) {
+            for(Tuple item : cluster.getList()) {
                 item.print();
             }
             System.out.println("\n],\nReal Center:");
-            find_center(cluster).print();
+            cluster.find_center().print();
         }
 
         //Calculate error level
@@ -117,9 +152,13 @@ public class ClusterPlotter {
         ImagePlotter plotter = new ImagePlotter();
         plotter.setWidth(width);
         plotter.setHeight(height);
-        for(int i = 0; i < k; i++) {
-            for(int j = 0; j < clusters.get(i).size(); j++) {
-                plotter.addPoint((int) clusters.get(i).get(j).x, (int) clusters.get(i).get(j).y); //, clusterColors.get(i));
+        plotter.setDimensions(-400,400,-400,400);
+        //For each cluster, plot each point as the cluster color
+        for(Cluster cluster : clusters) {
+            for(int j = 0; j < cluster.size(); j++) {
+                System.out.print("Adding point");
+                cluster.get(j).print();
+                plotter.addPoint((int) cluster.get(j).x, (int) cluster.get(j).y, cluster.clusterColor);
             }
         }
         try {
@@ -147,16 +186,4 @@ public class ClusterPlotter {
         return data;
     }
 
-    Tuple find_center(List<Tuple> cluster) {
-        double total_x = 0;
-        double total_y = 0;
-
-        //Find average x and y of the cluster
-        for(Tuple item : cluster) {
-            total_x += item.x;
-            total_y += item.y;
-        }
-
-        return new Tuple(total_x/cluster.size(), total_y/cluster.size());
-    }
 }
