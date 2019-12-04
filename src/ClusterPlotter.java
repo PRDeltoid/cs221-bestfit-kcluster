@@ -35,6 +35,24 @@ public class ClusterPlotter {
         }
     };
 
+    class Cluster {
+        int clusterId;
+        Color clusterColor;
+        List<Tuple> cluster_array;
+
+        public void setClusterId(int id) {
+            this.clusterId = id;
+        }
+
+        public void setClusterColor(Color col) {
+            this.clusterColor = col;
+        }
+
+        public void add(Tuple tup) {
+            cluster_array.add(tup);
+        }
+    }
+
     public void plot(String datafile, String outfile, int k, int width, int height) {
 
         // Read data file
