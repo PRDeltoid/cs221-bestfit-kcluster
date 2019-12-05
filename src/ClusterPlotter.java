@@ -39,14 +39,16 @@ public class ClusterPlotter {
         int clusterId;
         Color clusterColor;
         List<Tuple> clusterArray;
+        Tuple centroid;
 
         public Cluster() {
         }
 
-        public Cluster(int id, Color col) {
+        public Cluster(int id, Color col, Tuple centroid) {
             this.clusterId = id;
             this.clusterColor = col;
             this.clusterArray = new ArrayList<>();
+            this.centroid = centroid;
         }
 
         public void setClusterId(int id) {
@@ -73,7 +75,11 @@ public class ClusterPlotter {
             return this.clusterArray;
         }
 
-        Tuple find_center() {
+        public Tuple getCentroid() {
+            return this.centroid;
+        }
+
+        Tuple findMeanCentroid() {
             double total_x = 0;
             double total_y = 0;
 
@@ -83,6 +89,7 @@ public class ClusterPlotter {
                 total_y += item.y;
             }
 
+            this.centroid = new Tuple(total_x/clusterArray.size(), total_y/clusterArray.size());
             return new Tuple(total_x/clusterArray.size(), total_y/clusterArray.size());
         }
     }
@@ -92,60 +99,75 @@ public class ClusterPlotter {
         // Read data file
         List<Tuple> data = readData(datafile);
 
-        //Generate our initial (random) centers
+        //We'll need rand for generating colors and our "seed" centroids
         Random rand = new Random();
-        List<Tuple> centers = new ArrayList<>(k);
-        for(int i = 0; i<k; i++) {
-            centers.add(data.get(rand.nextInt(data.size())));
+
+        //Organize data into clusters based on randomly chosen centroids
+        List<Cluster> clusters = new ArrayList<Cluster>(k);
+        for (int i = 0; i < k; i++) {
+            //Generate cluster color
+            Color randomColor = new Color(rand.nextFloat(), rand.nextFloat(), rand.nextFloat());
+            //Add the cluster to our cluster list
+            clusters.add(new Cluster(i, randomColor, data.get(rand.nextInt(data.size()))));
         }
 
+        //Debug output of centroids
         System.out.println("Centers:");
-        for(Tuple center : centers) {
-            center.print();
+        for (Cluster cluster : clusters) {
+            cluster.getCentroid().print();
         }
         System.out.println("\n"); //newline
 
-        //Organize data into clusters based on centers
-        List<Cluster> clusters = new ArrayList<Cluster>(k);
-        for(int i = 0; i<k; i++) {
-            Color randomColor = new Color(rand.nextFloat(), rand.nextFloat(), rand.nextFloat());
-            clusters.add(new Cluster(i, randomColor));
-        }
-
-        for(Tuple item : data) {
-            double minDist = Double.POSITIVE_INFINITY;
-            Cluster cluster = new Cluster();
+        //Loop-Persistent error variables
+        double percentError = 0;
+        double error = Double.POSITIVE_INFINITY;
+        do {
             //For each item, calculate the distance to all centers
             //and mark the closest center's cluster
-            for(int i = 0; i < k; i++) {
-                if(item.dist(centers.get(i)) < minDist) {
-                    //We found a new minimum. Mark it and repeat
-                    minDist = item.dist(centers.get(i));
-                    cluster = clusters.get(i);
+            for (Tuple item : data) {
+                double minDist = Double.POSITIVE_INFINITY;
+                Cluster cluster = new Cluster();
+                for (int i = 0; i < k; i++) {
+                    Tuple clusterCentroid = clusters.get(i).getCentroid();
+                    if (item.dist(clusterCentroid) < minDist) {
+                        //We found a new minimum. Mark it and repeat
+                        minDist = item.dist(clusterCentroid);
+                        cluster = clusters.get(i);
+                    }
+                }
+                //Add the item to its closest cluster center
+                cluster.add(item);
+            }
+
+            //Console output of clusters for debugging
+            for (Cluster cluster : clusters) {
+                System.out.println("[");
+                for (Tuple item : cluster.getList()) {
+                    item.print();
+                }
+                System.out.println("\n],\nMean Center:");
+                cluster.findMeanCentroid().print();
+                System.out.println("");
+            }
+
+            //Calculate error level
+            double distFromCenterTotal = 0;
+            int totalNodes = 0;
+            for (Cluster cluster : clusters) {
+                //this function also changes the Cluster's centroid to the found center
+                Tuple clusterCenter = cluster.findMeanCentroid();
+                for (Tuple item : cluster.getList()) {
+                    distFromCenterTotal += clusterCenter.dist(item);
+                    totalNodes += cluster.size();
                 }
             }
-            //Add the item to its closest cluster center
-            cluster.add(item);
-        }
-
-        //Console output of clusters for debugging
-        for(Cluster cluster : clusters) {
-            System.out.println("[");
-            for(Tuple item : cluster.getList()) {
-                item.print();
+            double newError = distFromCenterTotal / totalNodes;
+            percentError = Math.abs(newError - error) / error; //produces NaN on first pass??
+            if(percentError > 0.1) {
+                error = percentError;
             }
-            System.out.println("\n],\nReal Center:");
-            cluster.find_center().print();
-        }
-
-        //Calculate error level
-        //TODO
-        /*
-        for(List<Tuple> cluster : clusters) {
-            for (Tuple item : data) {
-
-            }
-        }*/
+            System.out.println("New Error: " + newError + " distFromCenterTotal: " + distFromCenterTotal + " totalNodes: " + totalNodes + " Error: " + error + " Percent Error: " + percentError);
+        } while(percentError > 0.1);
 
         //Draw a pretty picture
         ImagePlotter plotter = new ImagePlotter();
@@ -155,8 +177,8 @@ public class ClusterPlotter {
         //For each cluster, plot each point as the cluster color
         for(Cluster cluster : clusters) {
             for(int j = 0; j < cluster.size(); j++) {
-                System.out.print("Adding point");
-                cluster.get(j).print();
+                //System.out.print("Adding point");
+                //cluster.get(j).print();
                 plotter.addPoint((int) cluster.get(j).x, (int) cluster.get(j).y, cluster.clusterColor);
             }
         }
