@@ -55,10 +55,6 @@ public class ClusterPlotter {
             this.clusterId = id;
         }
 
-        public void setClusterColor(Color col) {
-            this.clusterColor = col;
-        }
-
         public void add(Tuple tup) {
             clusterArray.add(tup);
         }
@@ -121,7 +117,9 @@ public class ClusterPlotter {
         //Loop-Persistent error variables
         double percentError = 0;
         double error = Double.POSITIVE_INFINITY;
+        Boolean repeat = false;
         do {
+            repeat = false;
             //For each item, calculate the distance to all centers
             //and mark the closest center's cluster
             for (Tuple item : data) {
@@ -161,13 +159,22 @@ public class ClusterPlotter {
                     totalNodes += cluster.size();
                 }
             }
+
+            //Compute the new error 𝑛𝑒 as the average distance of each data point from the new center of its cluster
             double newError = distFromCenterTotal / totalNodes;
+
+            //Calculate the percentage error as |ne - e| / e
             percentError = Math.abs(newError - error) / error; //produces NaN on first pass??
-            if(percentError > 0.1) {
-                error = percentError;
-            }
+            //Debug output
             System.out.println("New Error: " + newError + " distFromCenterTotal: " + distFromCenterTotal + " totalNodes: " + totalNodes + " Error: " + error + " Percent Error: " + percentError);
-        } while(percentError > 0.1);
+
+            //If our percent error is greater than a small delta, set error = newError and repeat the loop
+            if(percentError > 0.1 || Double.isNaN(percentError)) {
+                error = newError;
+                repeat = true;
+            }
+
+        } while(repeat == true); //error > 0.1);
 
         //Draw a pretty picture
         ImagePlotter plotter = new ImagePlotter();
